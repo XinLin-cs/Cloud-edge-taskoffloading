@@ -1,2 +1,2 @@
-# Cloud-edge-taskoffloading-
-云边任务卸载算法
+# Task offloading in Cloud-edge enviroment
+云边环境下的任务卸载算法
