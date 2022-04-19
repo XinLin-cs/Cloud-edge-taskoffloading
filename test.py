@@ -27,5 +27,7 @@ solver.mounting_data(
     edge_weight=[[4,12,12,4],[7,13,13,7],[9,15,15,9],[6,7,7,6]], 
     node_weight=[[4,2],[8,1],[11,3],[5,16]]
 )
-cost = solver.solve_VMC()
-print(cost)
+res_VMC = solver.solve_VMC()
+print("VMC", res_VMC)
+res_HETO = solver.solve_HETO()
+print("HETO", res_HETO)

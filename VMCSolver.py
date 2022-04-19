@@ -3,6 +3,7 @@
 
 import logging
 import math
+from tabnanny import check
 from ortools.graph import pywrapgraph
 
 class Solver(object):
@@ -83,9 +84,9 @@ class Solver(object):
             if (e1['flag']==2 or 3) and (e2['flag']==0 or 1):
                 return 1
         if e1['dst']==e2['dst']:
-            if (e1['flag']==0 or 3) and (e2['flag']==1 or 2):
+            if (e1['flag']==0 or 2) and (e2['flag']==1 or 3):
                 return 1
-            if (e1['flag']==1 or 2) and (e2['flag']==0 or 3):
+            if (e1['flag']==1 or 3) and (e2['flag']==0 or 2):
                 return 1
         return 0
 
@@ -100,14 +101,15 @@ class Solver(object):
                     'w': self.EDGE_weight[i][j],
                     'flag': j,
                 })
+
         # step 2
         Ni = [0] * (self.N + 1)
         for i in range(0, self.M):
-            Ni[self.EDGE_src[i]]+=1
-            Ni[self.EDGE_dst[i]]+=1
-        for i in range(0, self.M):
+            Ni[self.EDGE_src[i]-1]+=1
+            Ni[self.EDGE_dst[i]-1]+=1
+        for i in range(0, len(Ea)):
             # src term
-            vi , vj = Ea[i]['src'] , Ea[i]['dst']
+            vi , vj = Ea[i]['src']-1 , Ea[i]['dst']-1
             if Ea[i]['flag'] == 0 or 1:
                 Ea[i]['w'] += 1.0 * self.NODE_weight[vi][0] / Ni[vi]
             elif Ea[i]['flag'] == 2 or 3:
@@ -117,28 +119,40 @@ class Solver(object):
                 Ea[i]['w'] += 1.0 * self.NODE_weight[vj][0] / Ni[vj]
             elif Ea[i]['flag'] == 1 or 3:
                 Ea[i]['w'] += 1.0 * self.NODE_weight[vj][1] / Ni[vj]
+        
         # step 3
         ctotal = 0
-        while (len(Ea)>0):
-            self.logger.info('rest edges: %d',len(Ea))
-            vmin , pmin = 0 , 0 
+        esize = len(Ea)
+        rmvFlag = [0] * esize
+        cnt = [0] * esize
+        for i in range(0,len(Ea)):
+            for j in range(0,len(Ea)):
+                cnt[i] += self.checkEdges(Ea[i], Ea[j])
+        
+        while (esize>0):
+            self.logger.info('rest edges: %d',esize)
+            vmin , pmin = 0 , -1 
             # find minimal
             for i in range(0,len(Ea)):
-                cnt = 0
-                for j in range(0,len(Ea)):
-                    cnt += self.checkEdges(Ea[i], Ea[j])
-                tmp = 1.0 * Ea[i]['w'] / cnt
-                if tmp > vmin:
+                if rmvFlag[i] == 1:
+                    continue
+                tmp = 1.0 * Ea[i]['w'] / cnt[i]
+                if pmin==-1 or tmp > vmin:
                     vmin = tmp
                     pmin = i
             # add ctotal 
             ctotal += Ea[pmin]['w']
             # delete edges
-            Eb = []    
             for i in range(0,len(Ea)):
-                if i==pmin or self.checkEdges(Ea[i], Ea[pmin])==1:
+                if rmvFlag[i] == 1:
                     continue
-                Eb.append(Ea[i])
-            Ea = Eb
+                if i==pmin or self.checkEdges(Ea[i], Ea[pmin])==1:
+                    for j in range(0,len(Ea)):
+                        if rmvFlag[i] == 1:
+                            continue
+                        if self.checkEdges(Ea[i], Ea[j])==1:
+                            cnt[j] -= 1
+                    rmvFlag[i] = 1
+                    esize -= 1
             
         return ctotal
