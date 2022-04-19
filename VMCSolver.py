@@ -20,19 +20,21 @@ class Solver(object):
         self.NODE_weight = node_weight
 
     def solve_HomogeneousModel(self):
-        src = self.EDGE_src
-        dst = self.EDGE_dst
         # step 1
         edge = self.N                               
         cloud = self.N + 1
         self.logger.info('EDGE: %d',edge)
         self.logger.info('Cloud: %d',cloud)
         
-        
-        capacities = []
         # step 3
+        src = []
+        dst = []
+        capacities = []
         for i in range(0, self.M):
+            src.append(self.EDGE_src[i])
+            dst.append(self.EDGE_dst[i])
             capacities.append(self.EDGE_weight[i][0]-self.EDGE_weight[i][1])
+        
         # step 4
         for i in range(0, self.N):
             if self.NODE_weight[i][0]<self.NODE_weight[i][1]:
@@ -43,15 +45,17 @@ class Solver(object):
                 src.append(i)
                 dst.append(cloud)
                 capacities.append(self.NODE_weight[i][0]-self.NODE_weight[i][1])
-        print(src)
-        print(dst)
-        print(capacities)
+        # print(src)
+        # print(dst)
+        # print(capacities)
 
         max_flow = pywrapgraph.SimpleMaxFlow()
         for i in range(0, len(capacities)):
             max_flow.AddArcWithCapacity(src[i], dst[i], capacities[i])
+            # oppsited edge
+            max_flow.AddArcWithCapacity(dst[i], src[i], capacities[i])
         # Find the maximum flow between edge and cloud.
-        if max_flow.Solve(0, self.N-1) != max_flow.OPTIMAL:
+        if max_flow.Solve(edge, cloud) != max_flow.OPTIMAL:
             print('There was an issue with the max flow input.')
             return
         mf = max_flow.OptimalFlow()
