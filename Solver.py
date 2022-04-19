@@ -1,9 +1,22 @@
-from cmath import cos
+# settings from https://www.sciencedirect.com/science/article/pii/S0167739X18321332
+
+# setting for cloud
+cloud_proc_rate = 10 # GHz
+cloud_proc_cost = 0.5
+cloud_bandwidth = 500 # Mbps
+cloud_comm_cost = 0.5
+
+# setting for edge
+local_proc_rate = 1 # GHz
+local_proc_cost = 0.3
+local_bandwidth = 1000 # Mbps
+local_comm_cost = 0.7
+#========================================================
+
 import logging
 import queue
 from re import L
 from tabnanny import check
-import envconfig
 
 class Solver(object):
     def __init__(self, ):
@@ -62,11 +75,11 @@ class Solver(object):
             #任务计算时间
             if ((state>>u)&1)==0:
                 # ptime = self.TASK_cycles[u] * 1e6 / (envconfig.local_proc_rate * 1e9)
-                ptime = self.TASK_cycles[u] / envconfig.local_proc_rate / 1e3
-                cost[u] =ptime * envconfig.local_proc_cost
+                ptime = self.TASK_cycles[u] / local_proc_rate / 1e3
+                cost[u] =ptime *local_proc_cost
             elif ((state>>u)&1)==1:
-                ptime = self.TASK_cycles[u] / envconfig.cloud_proc_rate / 1e3
-                cost[u] =ptime * envconfig.cloud_proc_cost
+                ptime = self.TASK_cycles[u] / cloud_proc_rate / 1e3
+                cost[u] =ptime * cloud_proc_cost
             ftime[u] = stime[u] + ptime
             
             
@@ -77,11 +90,11 @@ class Solver(object):
                 if ((state>>u)&1) != ((state>>v)&1):
                     if (state>>u&1)==0:
                         # 本地服务器上传时延
-                        comm_time = 1.0 * bits / envconfig.cloud_bandwidth / 1e3
+                        comm_time = 1.0 * bits / cloud_bandwidth / 1e3
                     elif (state>>u&1)==1:
                         # 云服务器下发时延
                         # comm_time = (bits * 1e3) / (envconfig.local_bandwidth *1e6)
-                        comm_time = 1.0 * bits / envconfig.local_bandwidth / 1e3
+                        comm_time = 1.0 * bits / local_bandwidth / 1e3
                     else:
                         comm_time = 0.0
 
@@ -135,17 +148,17 @@ class Solver(object):
         tr = [.0]*self.TASK_num
         tl = [.0]*self.TASK_num
         for u in range(0,self.TASK_num):
-            tl[u] += self.TASK_cycles[u] / envconfig.local_proc_rate / 1e3
-            tr[u] += self.TASK_cycles[u] / envconfig.cloud_proc_rate / 1e3
+            tl[u] += self.TASK_cycles[u] / local_proc_rate / 1e3
+            tr[u] += self.TASK_cycles[u] / cloud_proc_rate / 1e3
             if self.LOCAL[u]==1:
                 tr[u] = 1e18
 
             for vv in self.Graph[u]:
                 v , bits = vv[0],vv[1]
-                comm_time = 1.0 * bits / envconfig.local_bandwidth / 1e3
+                comm_time = 1.0 * bits / local_bandwidth / 1e3
                 tl[v] = max(tl[v], min(tl[u], tr[u] + comm_time))
                 if self.LOCAL[v]==1:
                     continue
-                comm_time = 1.0 * bits / envconfig.cloud_bandwidth / 1e3
+                comm_time = 1.0 * bits / cloud_bandwidth / 1e3
                 tr[v] = max(tr[v], min(tl[u] + comm_time, tr[u]))
         return tl[self.TASK_num-1]
