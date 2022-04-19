@@ -50,11 +50,11 @@ def getGraph(reload=0):
         wij = [[0] * 4 for i in range(0,n)]
         for i in range(0,n):
             l , r = wij_range[0],wij_range[1]
-            wij[i][0] = random.randint(l,r)
-            wij[i][3] = random.randint(l,r)
-            r = min(r, wij[i][0], wij[i][3]) # w1,4 >= w2,3
             wij[i][1] = random.randint(l,r)
             wij[i][2] = random.randint(l,r)
+            r = min(r, wij[i][0], wij[i][3]) # w1,4 <= w2,3
+            wij[i][0] = random.randint(l,r)
+            wij[i][3] = random.randint(l,r)
             # for i in range(0,4):
             #     g.insert(loc=len(g.columns), column='w%d'%(i+1), value=wij[i])
             # g.to_csv('./data/graph_weighted/%s.csv'%(gname),sep=' ',index=False,header=True)
