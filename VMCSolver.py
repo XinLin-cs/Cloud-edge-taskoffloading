@@ -4,6 +4,7 @@
 import logging
 import math
 from tabnanny import check
+import time
 from ortools.graph import pywrapgraph
 
 class Solver(object):
@@ -22,6 +23,7 @@ class Solver(object):
 
     # Homogeneous Model
     def solve_VMC(self):
+        TIME1 = time.perf_counter()
         # step 1
         edge = self.N + 1                              
         cloud = self.N + 2
@@ -67,13 +69,15 @@ class Solver(object):
         term1 = 0
         for i in range(0, self.M):
             term1 += self.EDGE_weight[i][0]
-        self.logger.info('term1: %d',term1)
         # term2
         term2 = 0
         for i in range(0, self.N):
             term2 += min(self.NODE_weight[i][0], self.NODE_weight[i][1])
-        self.logger.info('term2: %d',term2)
+        self.logger.info('term1 , term2: %d %d',term1,term2)
 
+        TIME2 = time.perf_counter()
+        exeTIME = (TIME2-TIME1) * 1e3
+        self.logger.info('execution Time (ms): %f',exeTIME)
         return mf+term1+term2
 
     # Hetrogeneous Model
@@ -91,6 +95,7 @@ class Solver(object):
         return 0
 
     def solve_HETO(self):
+        TIME1 = time.perf_counter()
         # step 1
         Ea = []
         for i in range(0, self.M):
@@ -130,7 +135,7 @@ class Solver(object):
                 cnt[i] += self.checkEdges(Ea[i], Ea[j])
         
         while (esize>0):
-            self.logger.info('rest edges: %d',esize)
+            # self.logger.info('rest edges: %d',esize)
             vmin , pmin = 0 , -1 
             # find minimal
             for i in range(0,len(Ea)):
@@ -154,5 +159,8 @@ class Solver(object):
                             cnt[j] -= 1
                     rmvFlag[i] = 1
                     esize -= 1
-            
+
+        TIME2 = time.perf_counter()
+        exeTIME = (TIME2-TIME1) * 1e3
+        self.logger.info('execution Time (ms): %f',exeTIME) 
         return ctotal
