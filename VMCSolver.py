@@ -22,11 +22,12 @@ class Solver(object):
         self.NODE_weight = node_weight
 
     # Homogeneous Model
+    # VMC
     def solve_VMC(self):
         TIME1 = time.perf_counter()
         # step 1
-        edge = self.N + 1                              
-        cloud = self.N + 2
+        edge = self.N                             
+        cloud = self.N + 1
         self.logger.info('EDGE: %d',edge)
         self.logger.info('Cloud: %d',cloud)
         
@@ -35,8 +36,8 @@ class Solver(object):
         dst = []
         capacities = []
         for i in range(0, self.M):
-            src.append(self.EDGE_src[i])
-            dst.append(self.EDGE_dst[i])
+            src.append(self.EDGE_src[i]-1)
+            dst.append(self.EDGE_dst[i]-1)
             capacities.append(self.EDGE_weight[i][1]-self.EDGE_weight[i][0])
         
         # step 4
@@ -69,28 +70,37 @@ class Solver(object):
         term1 = 0
         for i in range(0, self.M):
             term1 += self.EDGE_weight[i][0]
+        self.logger.info('term1: %d',term1)
         # term2
         term2 = 0
         for i in range(0, self.N):
             term2 += min(self.NODE_weight[i][0], self.NODE_weight[i][1])
-        self.logger.info('term1 , term2: %d %d',term1,term2)
+        self.logger.info('term2: %d',term2)
+        ctotal = mf+term1+term2
+        self.logger.info('Cost: %f',ctotal) 
 
         TIME2 = time.perf_counter()
         exeTIME = (TIME2-TIME1) * 1e3
-        self.logger.info('execution Time (ms): %f',exeTIME)
-        return mf+term1+term2
+        self.logger.info('Execution Time (ms): %f',exeTIME)
+        return ctotal, exeTIME
 
     # Hetrogeneous Model
+    # HETO
     def checkEdges(self, e1, e2):
-        if e1['src']==e2['src']:
-            if (e1['flag']==0 or 1) and (e2['flag']==2 or 3):
+        # ?
+        # if e1['src']==e2['src'] and e1['dst']==e2['dst']:
+        #     if e1['sTag']!=e2['sTag'] or e1['dTag']!=e2['dTag']:
+        #         return 1
+
+        # why the follow is wrong??
+        # oh i know. it really may cause div0 error, then i add the eps
+        if e1['src']==e2['src'] and e1['sTag']!=e2['sTag']:
                 return 1
-            if (e1['flag']==2 or 3) and (e2['flag']==0 or 1):
+        if e1['src']==e2['dst'] and e1['sTag']!=e2['dTag']:
                 return 1
-        if e1['dst']==e2['dst']:
-            if (e1['flag']==0 or 2) and (e2['flag']==1 or 3):
+        if e1['dst']==e2['src'] and e1['dTag']!=e2['sTag']:
                 return 1
-            if (e1['flag']==1 or 3) and (e2['flag']==0 or 2):
+        if e1['dst']==e2['dst'] and e1['dTag']!=e2['dTag']:
                 return 1
         return 0
 
@@ -99,14 +109,14 @@ class Solver(object):
         # step 1
         Ea = []
         for i in range(0, self.M):
-            for j in range(0, 3):
+            for j in range(0, 4):
                 Ea.append({
-                    'src': self.EDGE_src[i],
-                    'dst': self.EDGE_dst[i],
+                    'src': self.EDGE_src[i]-1,
+                    'dst': self.EDGE_dst[i]-1,
                     'w': self.EDGE_weight[i][j],
-                    'flag': j,
+                    'sTag': j // 2, # src: edge=0,1 cloud=2,3
+                    'dTag': j % 2, # dst: edge=0,2 cloud=1,3
                 })
-
         # step 2
         Ni = [0] * (self.N + 1)
         for i in range(0, self.M):
@@ -114,35 +124,33 @@ class Solver(object):
             Ni[self.EDGE_dst[i]-1]+=1
         for i in range(0, len(Ea)):
             # src term
-            vi , vj = Ea[i]['src']-1 , Ea[i]['dst']-1
-            if Ea[i]['flag'] == 0 or 1:
+            vi , vj = Ea[i]['src'] , Ea[i]['dst']
+            if Ea[i]['sTag'] == 0:
                 Ea[i]['w'] += 1.0 * self.NODE_weight[vi][0] / Ni[vi]
-            elif Ea[i]['flag'] == 2 or 3:
+            else:
                 Ea[i]['w'] += 1.0 * self.NODE_weight[vi][1] / Ni[vi]
             # dst term
-            if Ea[i]['flag'] == 0 or 2:
+            if Ea[i]['dTag'] == 0:
                 Ea[i]['w'] += 1.0 * self.NODE_weight[vj][0] / Ni[vj]
-            elif Ea[i]['flag'] == 1 or 3:
+            else:
                 Ea[i]['w'] += 1.0 * self.NODE_weight[vj][1] / Ni[vj]
-        
         # step 3
         ctotal = 0
-        esize = len(Ea)
-        rmvFlag = [0] * esize
-        cnt = [0] * esize
+        rmvFlag = [0] * (len(Ea))
+        cnt = [0] * (len(Ea))
         for i in range(0,len(Ea)):
             for j in range(0,len(Ea)):
                 cnt[i] += self.checkEdges(Ea[i], Ea[j])
-        
-        while (esize>0):
-            # self.logger.info('rest edges: %d',esize)
+        nowsz = len(Ea)
+        while (nowsz>0):
+            # self.logger.info('rest edges: %d',nowsz)
             vmin , pmin = 0 , -1 
             # find minimal
             for i in range(0,len(Ea)):
                 if rmvFlag[i] == 1:
                     continue
-                tmp = 1.0 * Ea[i]['w'] / cnt[i]
-                if pmin==-1 or tmp > vmin:
+                tmp = 1.0 * Ea[i]['w'] / (cnt[i]+1e-6)
+                if pmin==-1 or tmp < vmin:
                     vmin = tmp
                     pmin = i
             # add ctotal 
@@ -151,16 +159,17 @@ class Solver(object):
             for i in range(0,len(Ea)):
                 if rmvFlag[i] == 1:
                     continue
-                if i==pmin or self.checkEdges(Ea[i], Ea[pmin])==1:
+                if i==pmin or self.checkEdges(Ea[pmin], Ea[i])==1:
                     for j in range(0,len(Ea)):
-                        if rmvFlag[i] == 1:
+                        if rmvFlag[j] == 1:
                             continue
                         if self.checkEdges(Ea[i], Ea[j])==1:
                             cnt[j] -= 1
                     rmvFlag[i] = 1
-                    esize -= 1
+                    nowsz -= 1
+        self.logger.info('Cost: %f',ctotal) 
 
         TIME2 = time.perf_counter()
         exeTIME = (TIME2-TIME1) * 1e3
-        self.logger.info('execution Time (ms): %f',exeTIME) 
-        return ctotal
+        self.logger.info('Execution Time (ms): %f',exeTIME) 
+        return ctotal , exeTIME
