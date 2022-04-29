@@ -1,25 +1,54 @@
 from convertingGraph import getGraph
 from VMCSolver import Solver
 import pandas as pd
+from tqdm import tqdm
+from numpy import mean
+import logging
 
 graphs = getGraph()
 
 resMat = []
 
 # running all datasets
-for g in graphs:
-    print("==============",g['tag'],"VMC","==============")
-    solver = Solver()
-    solver.mounting_data(n=g['n'], m=g['m'], src=g['src'],dst=g['dst'], edge_weight=g['wij'], node_weight=g['wi'])
-    cost , exeTime = solver.solve_VMC()
-    resMat.append([g['tag'],'VMC',cost,exeTime])
+for g in tqdm(graphs):
+    # print("==============",g['tag'],"VMC","==============")
+    # solver = Solver()
+    # solver.mounting_data(n=g['n'], m=g['m'], src=g['src'],dst=g['dst'], edge_weight=g['wij'], node_weight=g['wi'])
+    # cost , exeTime = solver.solve_VMC()
+    # resMat.append([g['tag'],'VMC',cost,exeTime])
 
-    print("==============",g['tag'],"HETO","==============")
-    solver = Solver()
-    solver.mounting_data(n=g['n'], m=g['m'], src=g['src'],dst=g['dst'], edge_weight=g['wij'], node_weight=g['wi'])
-    cost , exeTime = solver.solve_HETO()
-    resMat.append([g['tag'],'HETO',cost,exeTime])
+    # print("==============",g['tag'],"HETO","==============")
+    # solver = Solver()
+    # solver.mounting_data(n=g['n'], m=g['m'], src=g['src'],dst=g['dst'], edge_weight=g['wij'], node_weight=g['wi'])
+    # cost , exeTime = solver.solve_HETO()
+    # resMat.append([g['tag'],'HETO',cost,exeTime])
 
+    # print("==============",g['tag'],"GREE","==============")
+    # solver = Solver()
+    # solver.mounting_data(n=g['n'], m=g['m'], src=g['src'],dst=g['dst'], edge_weight=g['wij'], node_weight=g['wi'])
+    # cost , exeTime = solver.solve_GREE()
+    # resMat.append([g['tag'],'GREE',cost,exeTime])
+
+    print("==============",g['tag'],"==============")
+    VMCs = []
+    HETOs = []
+    GREEs = []
+    D2Ds = []
+    solver = Solver(showdebug=False)
+    solver.mounting_data(n=g['n'], m=g['m'], src=g['src'],dst=g['dst'], edge_weight=g['wij'], node_weight=g['wi'])
+    for repeating in range(0,1):
+       cost , exeTime , Vx = solver.solve_VMC()
+       VMCs.append(cost)
+       cost , exeTime = solver.solve_HETO()
+       HETOs.append(cost)
+       cost , exeTime = solver.solve_GREE()
+       GREEs.append(cost)
+       cost , exeTime = solver.solve_D2D()
+       D2Ds.append(cost)
+    resMat.append([g['tag'],'VMC',mean(VMCs),exeTime])
+    resMat.append([g['tag'],'HETO',mean(HETOs),exeTime])
+    resMat.append([g['tag'],'GREE',mean(GREEs),exeTime])
+    resMat.append([g['tag'],'D2D',mean(D2Ds),exeTime])
 # save result as csv
 df = pd.DataFrame(
     resMat,

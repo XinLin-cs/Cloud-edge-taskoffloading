@@ -15,11 +15,11 @@ mygraphs = {
         "size": 183,
         "volume": 2494,
     },
-    "dataset4":{
-        "sep": "\t",
-        "size": 198,
-        "volume": 2742,
-    },
+    # "dataset4":{
+    #     "sep": "\t",
+    #     "size": 198,
+    #     "volume": 2742,
+    # },
     "dense1":{
         "sep": " ",
         "size": 62,
@@ -31,8 +31,8 @@ mygraphs = {
         "volume": 159,
     },
 }
-wij_range = [0,100] # edges
-wi_range = [0,100] # nodes
+wij_range = [0,1000] # edges
+wi_range = [0,1000] # nodes
 #========================================================
 import random
 import pandas as pd
